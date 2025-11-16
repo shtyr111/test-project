@@ -27,7 +27,6 @@ func (u UserRepository) Insert(user models.User) (*models.User, error) {
 		return nil, fmt.Errorf("Произошла ошибка при инсерт. Параметры user: %+v\n", user, err)
 	}
 
-	log.Info(user)
 	return &user, nil
 }
 
@@ -48,7 +47,7 @@ func (u UserRepository) UpdateStatusById(id uuid.UUID, status string) error {
 		"UPDATE users SET status = $1 WHERE id = $2", status, id)
 
 	if err != nil {
-		log.Error("UpdateStatusById failed: %v\n", err)
+		return fmt.Errorf("Произошла ошибка при обновлении юзена с id %x: %w", id.String(), err)
 	}
 
 	return nil
@@ -61,9 +60,7 @@ func (u UserRepository) FindAllWithStatusNew(tx pgx.Tx) ([]models.User, error) {
 		"SELECT * FROM users where status = $1", "NEW")
 
 	if err != nil {
-		log.Fatalf("Row scan failed: %v\n", err)
-
-		return nil, err
+		return nil, fmt.Errorf("Произошла ошибка при выполненении запроса на получение юзеров с статусом NEW: %w", err)
 	}
 
 	for rows.Next() {
@@ -72,9 +69,7 @@ func (u UserRepository) FindAllWithStatusNew(tx pgx.Tx) ([]models.User, error) {
 		err1 := rows.Scan(&user.Id, &user.Name, &user.Age, &user.Number, &user.Status)
 
 		if err1 != nil {
-			log.Fatalf("Row scan failed: %v\n", err)
-
-			return nil, err
+			return nil, fmt.Errorf("Произошла ошибка при сканировании после запроса на получение юзеров с статусом NEW: %w", err)
 		}
 
 		users = append(users, user)

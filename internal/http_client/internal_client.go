@@ -3,6 +3,7 @@ package http_client
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -22,15 +23,13 @@ func New() *InternalClient {
 func (i InternalClient) SendToInternal(user models.User) (*models.InternalResponse, error) {
 	requestBodyBytes, err := json.Marshal(user)
 	if err != nil {
-		log.Error("Произошла ошибка при парсинге", err)
-		return nil, err
+		return nil, fmt.Errorf("Произошла ошибка при сериализации тела запроса /saveToInternalSystem %+v\n: %w", user, err)
 	}
 
 	req, err := http.NewRequest("POST", "http://localhost:8081/saveToInternalSystem", bytes.NewBuffer(requestBodyBytes))
 
 	if err != nil {
-		log.Error("Произошла ошибка создании запроса /saveToInternalSystem", err)
-		return nil, err
+		return nil, fmt.Errorf("произошла ошибка при создании запроса /saveToInternalSystem: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -57,16 +56,14 @@ func (i InternalClient) SendToInternal(user models.User) (*models.InternalRespon
 
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Error("Ошибка при чтении тела ответа /saveToInternalSystem", err)
-		return nil, err
+		return nil, fmt.Errorf("произошла ошибка при чтении тела ответа h/saveToInternalSystem: %w", err)
 	}
 
 	var response models.InternalResponse
 
 	err = json.Unmarshal(respBodyBytes, &response)
 	if err != nil {
-		log.Error("Ошибка при парсинге тела ответа /saveToInternalSystem", err)
-		return nil, err
+		return nil, fmt.Errorf("произошла ошибка при десериализации тела ответа h/saveToInternalSystem: %w", err)
 	}
 
 	return &response, nil

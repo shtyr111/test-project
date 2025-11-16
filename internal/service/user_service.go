@@ -65,7 +65,7 @@ func (u UserService) FindAndSendUsersWithStatusNewToInternalSystem(sectionNumber
 
 	users, err := u.userRepository.FindAllWithStatusNew(tx)
 	if err != nil {
-		log.Error("Error while fetching users", err)
+		log.Error(err)
 		return
 	}
 
@@ -104,11 +104,13 @@ func (u UserService) sendUserWithStatusNewToInternalSystemAndSave(user models.Us
 
 	internalResponse, err := u.internalClient.SendToInternal(user)
 	if err != nil {
+		log.Error(err)
 		return
 	}
 
 	err = u.userRepository.UpdateStatusById(user.Id, internalResponse.Status)
 	if err != nil {
+		log.Error(err)
 		return
 	}
 
