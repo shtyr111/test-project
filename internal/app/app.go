@@ -4,6 +4,7 @@ import (
 	"test-project/internal/config/application"
 	"test-project/internal/config/logger"
 	"test-project/internal/config/postgres"
+	"test-project/internal/http_client"
 	"test-project/internal/repository"
 	sendToOlbScheduler "test-project/internal/scheduler/send_to_olb"
 	"test-project/internal/service"
@@ -31,12 +32,14 @@ func Run() {
 	if err1 != nil {
 	}
 
+	client := http_client.New()
 	repository := repository.New(pool)
-	service := service.New(repository)
+	service := service.New(repository, client)
 	handler := handlers.New(service)
 	server := rest.New(handler)
 
-	sendToOlbScheduler := sendToOlbScheduler.New(config.Properties.SendUserToOlbSchedulerCron, config.Properties.SendUserToOlbSchedulerSectionAdvisoryCron, service)
+	sendToOlbScheduler := sendToOlbScheduler.New(config.Properties.SendUserToOlbSchedulerCron, config.Properties.SendUserToOlbSchedulerSectionAdvisoryCron,
+		config.Properties.SendUserToOlbSchedulerParallelCurrencySend, service)
 	sendToOlbScheduler.Start()
 
 	server.RunHttpServer()

@@ -26,8 +26,9 @@ type Config struct {
 	} `yaml:"database"`
 
 	Properties struct {
-		SendUserToOlbSchedulerCron                string `yaml:"send-user-to-olb-scheduler-cron"`
-		SendUserToOlbSchedulerSectionAdvisoryCron int    `yaml:"send-user-to-olb-scheduler-section-advisory-lock"`
+		SendUserToOlbSchedulerCron                 string `yaml:"send-user-to-olb-scheduler-cron"`
+		SendUserToOlbSchedulerSectionAdvisoryCron  int    `yaml:"send-user-to-olb-scheduler-section-advisory-lock"`
+		SendUserToOlbSchedulerParallelCurrencySend int    `yaml:"send-user-to-olb-scheduler-parallel-currency-send"`
 	} `yaml:"configuration-properties"`
 }
 

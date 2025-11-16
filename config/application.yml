@@ -14,3 +14,4 @@ database:
 configuration-properties:
   send-user-to-olb-scheduler-cron: "* * * * *"
   send-user-to-olb-scheduler-section-advisory-lock: 1
+  send-user-to-olb-scheduler-parallel-currency-send: 2

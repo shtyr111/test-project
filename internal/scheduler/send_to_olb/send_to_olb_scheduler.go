@@ -8,26 +8,27 @@ import (
 )
 
 type SendToOlbScheduler struct {
-	cron                string
-	advisoryLockSection int
-	userService         *service.UserService
+	cron                 string
+	advisoryLockSection  int
+	parallelCurrencySend int
+	userService          *service.UserService
 }
 
-func New(cron string, advisoryLockSection int, userService *service.UserService) *SendToOlbScheduler {
-	return &SendToOlbScheduler{cron, advisoryLockSection, userService}
+func New(cron string, advisoryLockSection int, parallelCurrencySend int, userService *service.UserService) *SendToOlbScheduler {
+	return &SendToOlbScheduler{cron, advisoryLockSection, parallelCurrencySend, userService}
 }
 
 func (s SendToOlbScheduler) Start() {
 	loc, _ := time.LoadLocation("Europe/Moscow")
 	scheduler := gocron.NewScheduler(loc)
 
-	scheduler.Cron(s.cron).Do(executeFunc(s.advisoryLockSection, s.userService))
+	scheduler.Cron(s.cron).Do(executeFunc(s.advisoryLockSection, s.parallelCurrencySend, s.userService))
 
 	scheduler.StartAsync()
 }
 
-func executeFunc(advisoryLockSection int, userService *service.UserService) func() {
+func executeFunc(advisoryLockSection int, parallelCurrencySend int, userService *service.UserService) func() {
 	return func() {
-		userService.SendUsersWithStatusNewToInternalSystem(advisoryLockSection)
+		userService.FindAndSendUsersWithStatusNewToInternalSystem(advisoryLockSection, parallelCurrencySend)
 	}
 }

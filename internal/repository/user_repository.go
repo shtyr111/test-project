@@ -46,10 +46,21 @@ func (u UserRepository) FindById(id uuid.UUID) (*models.User, error) {
 	return &user, nil
 }
 
-func (u UserRepository) FindAllWithStatusNew() ([]models.User, error) {
+func (u UserRepository) UpdateStatusById(id uuid.UUID, status string) error {
+	_, err := u.pool.Exec(context.Background(),
+		"UPDATE users SET status = $1 WHERE id = $2", status, id)
+
+	if err != nil {
+		log.Error("UpdateStatusById failed: %v\n", err)
+	}
+
+	return nil
+}
+
+func (u UserRepository) FindAllWithStatusNew(tx pgx.Tx) ([]models.User, error) {
 	var users []models.User
 
-	rows, err := u.pool.Query(context.Background(),
+	rows, err := tx.Query(context.Background(),
 		"SELECT * FROM users where status = $1", "NEW")
 
 	if err != nil {
@@ -96,11 +107,13 @@ func (u UserRepository) BeginTxWithAdvisoryLock(ctx context.Context, lockID int)
 	}
 
 	if !gotLock {
+		log.Info("Блокировка не была получена")
 		// Если lock не получен, откатываем и освобождаем соединение, возвращаем nil без ошибки
 		tx.Rollback(ctx)
 		conn.Release()
 		return nil, nil
 	}
 
+	log.Info("Блокировка успешно получена")
 	return tx, nil
 }
