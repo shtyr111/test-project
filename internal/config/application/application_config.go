@@ -1,4 +1,4 @@
-package config
+package application
 
 import (
 	"os"
@@ -26,7 +26,7 @@ var fullConfig Config
 var DATABASE_CONFIG = fullConfig.Database
 var SERVER_CONFIG = fullConfig.Server
 
-func LoadApplicationConfig() {
+func LoadApplicationConfig() Config {
 	buf, err := os.ReadFile("./config/application.yml")
 	if err != nil {
 		log.Errorln("Ошибка при загрузке конфигурации", err.Error())
@@ -40,4 +40,6 @@ func LoadApplicationConfig() {
 	fullConfig = cfg
 	DATABASE_CONFIG = cfg.Database
 	SERVER_CONFIG = cfg.Server
+
+	return cfg
 }

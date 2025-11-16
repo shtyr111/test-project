@@ -7,46 +7,68 @@ import (
 	"test-project/internal/models"
 	"test-project/internal/service"
 
+	"github.com/google/uuid"
+
 	log "github.com/sirupsen/logrus"
 )
 
-func UsersHandler(w http.ResponseWriter, r *http.Request) {
+type UserHandler struct {
+	userService *service.UserService
+}
+
+func New(userService *service.UserService) *UserHandler {
+	return &UserHandler{userService: userService}
+}
+
+func (u UserHandler) UsersHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		getUsersHandler(w, r)
+		getUsersHandler(u, w, r)
 	case http.MethodPost:
-		postUsersHandler(w, r)
+		postUsersHandler(u, w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func getUsersHandler(w http.ResponseWriter, r *http.Request) {
+func getUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
 	log.Info("Получен запрос GET /users: ", r)
 
-	users := []models.User{{Name: "Alice", Age: 1}, {Name: "Bob", Age: 2}}
+	strId := r.URL.Query().Get("id")
+	id, err := uuid.Parse(strId)
+
+	if err != nil {
+		log.Fatalf("Ошибка парсинга: %v\n", err)
+	}
+
+	user, err := u.userService.FindById(id)
+	if err != nil {
+		log.Fatalf("Ошибка парсинга: %v\n", err)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
-	log.Info("Отправлен ответ GET /users:", users)
+	json.NewEncoder(w).Encode(user)
+	log.Info("Отправлен ответ GET /users:", user)
 }
 
-func postUsersHandler(w http.ResponseWriter, r *http.Request) {
+func postUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
 	bodyBytes, err := io.ReadAll(r.Body)
+
+	if err != nil {
+		log.Println("Ошибка чтения тела запроса:", err)
+	}
+
 	log.Info("Получен запрос POST /users. Хедеры: ", r.Header, " Тело: ", string(bodyBytes))
 
 	var users []models.User
 	e := json.Unmarshal(bodyBytes, &users)
 	if e != nil {
-		if err != nil {
-			log.Println("Ошибка чтения тела запроса:", err)
-		}
-
 		log.Error("Произошла ошибка при десериалазации тела: ", e.Error())
 		http.Error(w, e.Error(), http.StatusBadRequest)
 		return
 	}
 
-	updateUsers := service.SaveUsers(users)
+	updateUsers := u.userService.SaveUsers(users)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updateUsers)

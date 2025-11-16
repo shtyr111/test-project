@@ -1,0 +1,19 @@
+version: '3.8' # Use a recent Docker Compose file format version
+services:
+  db:
+    image: postgres:16 # Specify the desired PostgreSQL version
+    restart: always # Ensure the container restarts automatically
+    environment:
+      POSTGRES_USER: postgres # Username for the PostgreSQL repository
+      POSTGRES_PASSWORD: postgres # Password for the PostgreSQL user
+      POSTGRES_DB: postgres # Name of the repository to create
+    ports:
+      - "5432:5432"
+  wiremock:
+    image: "wiremock/wiremock:latest"
+    container_name: my_wiremock
+    volumes:
+      - ./mappings:/home/wiremock/mappings
+    ports:
+      - "8081:8080"
+    entrypoint: ["/docker-entrypoint.sh", "--global-response-templating", "--disable-gzip", "--verbose"]

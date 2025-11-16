@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/getUserInfo",
+    "queryParameters": {
+      "id": {
+        "contains": ""
+      }
+    }
+  },
+
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "status": "good"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

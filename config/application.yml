@@ -8,3 +8,6 @@ database:
   password: postgres
   dbname: postgres
 
+schedulers:
+  send-user-to-olb:
+    cron: ""
