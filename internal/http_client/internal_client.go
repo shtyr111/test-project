@@ -48,8 +48,7 @@ func (i InternalClient) SendToInternal(user models.User) (*models.InternalRespon
 	resp, err := client.Do(req)
 
 	if err != nil {
-		log.Error("Произошла ошибка при запросе в /saveToInternalSystem", err)
-		return nil, err
+		return nil, fmt.Errorf("произошла ошибка при запросе в /saveToInternalSystem: %w", err)
 	}
 
 	defer resp.Body.Close()
