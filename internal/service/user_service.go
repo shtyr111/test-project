@@ -18,6 +18,8 @@ type UserService struct {
 	internalClient *http_client.InternalClient
 }
 
+var countSendUserWithStatusNewToInternalSystemAndSave int
+
 func New(userRepository *repository.UserRepository, internalClient *http_client.InternalClient) *UserService {
 	return &UserService{userRepository: userRepository, internalClient: internalClient}
 }
@@ -79,20 +81,26 @@ func (u UserService) FindAndSendUsersWithStatusNewToInternalSystem(sectionNumber
 func (u UserService) parallelSendUsersWithStatusNewToInternalSystemAndSave(users []models.User, parallelCurrencySend int) {
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, parallelCurrencySend)
+	var mutex sync.Mutex
 
 	for _, user := range users {
 		wg.Add(1)
-		go u.sendUserWithStatusNewToInternalSystemAndSave(user, semaphore, &wg)
+		go u.sendUserWithStatusNewToInternalSystemAndSave(user, semaphore, &wg, &mutex)
 	}
 
 	wg.Wait()
 }
 
-func (u UserService) sendUserWithStatusNewToInternalSystemAndSave(user models.User, semaphore chan struct{}, wg *sync.WaitGroup) {
+func (u UserService) sendUserWithStatusNewToInternalSystemAndSave(user models.User, semaphore chan struct{}, wg *sync.WaitGroup, mutex *sync.Mutex) {
 	defer wg.Done()
 
 	semaphore <- struct{}{}
 	defer func() { <-semaphore }()
+
+	mutex.Lock()
+	countSendUserWithStatusNewToInternalSystemAndSave++
+	log.Info("countSendUserWithStatusNewToInternalSystemAndSave: ", countSendUserWithStatusNewToInternalSystemAndSave)
+	mutex.Unlock()
 
 	internalResponse, err := u.internalClient.SendToInternal(user)
 	if err != nil {
