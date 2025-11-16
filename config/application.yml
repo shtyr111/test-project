@@ -7,7 +7,10 @@ database:
   username: postgres
   password: postgres
   dbname: postgres
+  pool:
+    min-size: 8
+    max-size: 16
 
-schedulers:
-  send-user-to-olb:
-    cron: ""
+configuration-properties:
+  send-user-to-olb-scheduler-cron: "* * * * *"
+  send-user-to-olb-scheduler-section-advisory-lock: 1

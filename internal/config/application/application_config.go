@@ -19,7 +19,16 @@ type Config struct {
 		Username string `yaml:"username"`
 		Password string `yaml:"password"`
 		DBName   string `yaml:"dbname"`
+		Pool     struct {
+			MinSize int32 `yaml:"min-size"`
+			MaxSize int32 `yaml:"max-size"`
+		} `yaml:"pool"`
 	} `yaml:"database"`
+
+	Properties struct {
+		SendUserToOlbSchedulerCron                string `yaml:"send-user-to-olb-scheduler-cron"`
+		SendUserToOlbSchedulerSectionAdvisoryCron int    `yaml:"send-user-to-olb-scheduler-section-advisory-lock"`
+	} `yaml:"configuration-properties"`
 }
 
 var fullConfig Config

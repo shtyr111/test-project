@@ -9,12 +9,9 @@ type User struct {
 	Name   string    `json:"name"`
 	Age    int       `json:"age"`
 	Number int       `json:"number"`
+	Status string    `json:"status"`
 }
 
-func (user *User) SetNumber(number int) {
-	user.Number = number
-}
-
-func (user *User) SetId(id uuid.UUID) {
-	user.Id = id
+func (user *User) SetStatus(Status string) {
+	user.Status = Status
 }

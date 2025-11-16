@@ -5,6 +5,7 @@ import (
 	"test-project/internal/repository"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 type UserService struct {
@@ -22,6 +23,7 @@ func (u UserService) FindById(id uuid.UUID) (*models.User, error) {
 func (u UserService) SaveUsers(users []models.User) []models.User {
 	var newUsers []models.User
 	for i := range users {
+		users[i].SetStatus("NEW")
 		user, err := u.userRepository.Insert(users[i])
 		if err != nil {
 		}
@@ -30,4 +32,15 @@ func (u UserService) SaveUsers(users []models.User) []models.User {
 	}
 
 	return newUsers
+}
+
+func (u UserService) SendUsersWithStatusNewToInternalSystem(sectionNumber int) {
+	log.Info("Старт выполнения задачи SendUsersWithStatusNewToInternalSystem")
+	users, err := u.userRepository.FindAllWithStatusNew()
+	if err != nil {
+		log.Error("Error while fetching users")
+		return
+	}
+
+	log.Info(users)
 }

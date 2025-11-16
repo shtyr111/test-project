@@ -5,6 +5,7 @@ import (
 	"test-project/internal/config/logger"
 	"test-project/internal/config/postgres"
 	"test-project/internal/repository"
+	sendToOlbScheduler "test-project/internal/scheduler/send_to_olb"
 	"test-project/internal/service"
 	"test-project/internal/transport/rest"
 	"test-project/internal/transport/rest/handlers"
@@ -18,6 +19,7 @@ func Run() {
 
 	log.Info("Server config: ", config.Server)
 	log.Info("Database config: ", config.Database)
+	log.Info("Properties config: ", config.Properties)
 
 	postgresConfig := postgres.New(&config)
 
@@ -33,6 +35,9 @@ func Run() {
 	service := service.New(repository)
 	handler := handlers.New(service)
 	server := rest.New(handler)
+
+	sendToOlbScheduler := sendToOlbScheduler.New(config.Properties.SendUserToOlbSchedulerCron, config.Properties.SendUserToOlbSchedulerSectionAdvisoryCron, service)
+	sendToOlbScheduler.Start()
 
 	server.RunHttpServer()
 	defer postgresConfig.ClosePool()

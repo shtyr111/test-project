@@ -32,8 +32,18 @@ func New(config *application.Config) *PostgresConfig {
 }
 
 func (p PostgresConfig) InitPool() (*pgxpool.Pool, error) {
+	poolConfig, err := pgxpool.ParseConfig(p.dns)
+	if err != nil {
+		log.Fatalf("Ошибка разбора конфигурации: %v", err)
+	}
 
-	pool, err := pgxpool.New(context.Background(), p.dns)
+	// Минимальное количество соединений в пуле
+	poolConfig.MinConns = p.config.Database.Pool.MinSize
+
+	// Максимальное количество соединений в пуле
+	poolConfig.MaxConns = p.config.Database.Pool.MaxSize
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
 
 	if err != nil {
 		log.Fatal("Ошибка подключения:", err)
@@ -47,7 +57,7 @@ func (p PostgresConfig) InitPool() (*pgxpool.Pool, error) {
 	}
 
 	p.Pool = pool
-	log.Info(p.Pool)
+
 	return pool, nil
 }
 
