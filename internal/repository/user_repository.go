@@ -2,13 +2,12 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"test-project/internal/models"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-
 	"github.com/jackc/pgx/v5/pgxpool"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -25,9 +24,7 @@ func (u UserRepository) Insert(user models.User) (*models.User, error) {
 		"INSERT INTO users (name, age, status) VALUES ($1, $2, $3) RETURNING id, number", user.Name, user.Age, user.Status).Scan(&user.Id, &user.Number)
 
 	if err != nil {
-		log.Error(err)
-
-		return nil, err
+		return nil, fmt.Errorf("Произошла ошибка при инсерт. Параметры user: %+v\n", user, err)
 	}
 
 	log.Info(user)
@@ -40,7 +37,7 @@ func (u UserRepository) FindById(id uuid.UUID) (*models.User, error) {
 		"SELECT id, name, number, age FROM users where id = $1", id).Scan(&user.Id, &user.Name, &user.Number, &user.Age)
 
 	if err != nil {
-		log.Fatalf("Row scan failed: %v\n", err)
+		return nil, fmt.Errorf("Пользователь с id %x не найден: %w", id.String(), err)
 	}
 
 	return &user, nil

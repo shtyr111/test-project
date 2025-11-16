@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"test-project/internal/models"
@@ -32,39 +33,42 @@ func (u UserHandler) UsersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
-	log.Info("Получен запрос GET /users: ", r)
-
 	strId := r.URL.Query().Get("id")
 	id, err := uuid.Parse(strId)
 
 	if err != nil {
-		log.Fatalf("Ошибка парсинга: %v\n", err)
+		wrapErr := fmt.Errorf("Произошла ошибка при десериализации параметра id запроса: %w", err)
+		handleError(wrapErr, w)
+
+		return
 	}
 
 	user, err := u.userService.FindById(id)
 	if err != nil {
-		log.Fatalf("Ошибка парсинга: %v\n", err)
+		handleError(err, w)
+
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
-	log.Info("Отправлен ответ GET /users:", user)
 }
 
 func postUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
 	bodyBytes, err := io.ReadAll(r.Body)
 
 	if err != nil {
-		log.Println("Ошибка чтения тела запроса:", err)
+		wrapErr := fmt.Errorf("Произошла ошибка при десериализации тела запроса: %w", err)
+		handleError(wrapErr, w)
+
+		return
 	}
 
-	log.Info("Получен запрос POST /users. Хедеры: ", r.Header, " Тело: ", string(bodyBytes))
-
 	var users []models.User
-	e := json.Unmarshal(bodyBytes, &users)
-	if e != nil {
-		log.Error("Произошла ошибка при десериалазации тела: ", e.Error())
-		http.Error(w, e.Error(), http.StatusBadRequest)
+	err = json.Unmarshal(bodyBytes, &users)
+	if err != nil {
+		handleError(err, w)
+
 		return
 	}
 
@@ -72,5 +76,12 @@ func postUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updateUsers)
-	log.Info("Отправлен ответ POST /users:", updateUsers)
+}
+
+func handleError(err error, w http.ResponseWriter) {
+	log.Error(err)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusInternalServerError)
+	json.NewEncoder(w).Encode(models.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+	return
 }
