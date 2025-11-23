@@ -27,15 +27,15 @@ func New(userRepository *repository.UserRepository, internalClient *user_client.
 	return &UserService{userRepository: userRepository, internalClient: internalClient, webSocketService: webSocketService}
 }
 
-func (u UserService) FindById(id uuid.UUID) (*models.User, error) {
-	return u.userRepository.FindById(id)
+func (u UserService) FindById(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	return u.userRepository.FindById(ctx, id)
 }
 
-func (u UserService) SaveUsers(users []models.User) []models.User {
+func (u UserService) SaveUsers(ctx context.Context, users []models.User) []models.User {
 	var newUsers []models.User
 	for i := range users {
 		users[i].SetStatus("NEW")
-		user, err := u.userRepository.Insert(users[i])
+		user, err := u.userRepository.Insert(ctx, users[i])
 		if err != nil {
 		}
 
@@ -45,19 +45,19 @@ func (u UserService) SaveUsers(users []models.User) []models.User {
 	return newUsers
 }
 
-func (u UserService) PutUser(user *models.User) (*models.User, error) {
-	oldUser, err := u.userRepository.FindById(user.Id)
+func (u UserService) PutUser(ctx context.Context, user *models.User) (*models.User, error) {
+	oldUser, err := u.userRepository.FindById(ctx, user.Id)
 	if err != nil {
 		notification := models.Notification{Id: user.Id, Time: time.Now(), NewStatus: user.Status}
 		u.webSocketService.SendToClient(&notification)
 
-		return u.userRepository.Upsert(user)
+		return u.userRepository.Upsert(ctx, user)
 	}
 
 	notification := models.Notification{Id: user.Id, Time: time.Now(), NewStatus: user.Status, OldStatus: oldUser.Status}
 	u.webSocketService.SendToClient(&notification)
 
-	return u.userRepository.Upsert(user)
+	return u.userRepository.Upsert(ctx, user)
 }
 
 func (u UserService) FindAndSendUsersWithStatusNewToInternalSystem(sectionNumber int, parallelCurrencySend int) {

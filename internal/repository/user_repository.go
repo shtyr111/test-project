@@ -21,11 +21,11 @@ func New(p *pgxpool.Pool) *UserRepository {
 }
 
 // Прокинуть контекст сверху
-func (u UserRepository) Insert(user models.User) (*models.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+func (u UserRepository) Insert(ctx context.Context, user models.User) (*models.User, error) {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := u.pool.QueryRow(ctx,
+	err := u.pool.QueryRow(ctxWithTimeout,
 		"INSERT INTO users (name, age, status) VALUES ($1, $2, $3) RETURNING id, number", user.Name, user.Age, user.Status).Scan(&user.Id, &user.Number)
 
 	if err != nil {
@@ -35,9 +35,12 @@ func (u UserRepository) Insert(user models.User) (*models.User, error) {
 	return &user, nil
 }
 
-func (u UserRepository) FindById(id uuid.UUID) (*models.User, error) {
+func (u UserRepository) FindById(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	var user models.User
-	err := u.pool.QueryRow(context.Background(),
+	err := u.pool.QueryRow(ctxWithTimeout,
 		"SELECT id, name, number, age, status FROM users where id = $1", id).Scan(&user.Id, &user.Name, &user.Number, &user.Age, &user.Status)
 
 	if err != nil {
@@ -47,8 +50,11 @@ func (u UserRepository) FindById(id uuid.UUID) (*models.User, error) {
 	return &user, nil
 }
 
-func (u UserRepository) Upsert(user *models.User) (*models.User, error) {
-	_, err := u.pool.Exec(context.Background(),
+func (u UserRepository) Upsert(ctx context.Context, user *models.User) (*models.User, error) {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := u.pool.Exec(ctxWithTimeout,
 		"INSERT INTO users (id, name, age, status) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET name = $2, age = $3, status = $4", user.Id, user.Name, user.Age, user.Status)
 
 	if err != nil {

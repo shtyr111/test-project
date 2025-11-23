@@ -35,6 +35,7 @@ func (u UserHandler) UsersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	strId := r.URL.Query().Get("id")
 	id, err := uuid.Parse(strId)
 
@@ -45,7 +46,7 @@ func getUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := u.userService.FindById(id)
+	user, err := u.userService.FindById(ctx, id)
 	if err != nil {
 		handleError(err, w)
 
@@ -57,6 +58,7 @@ func getUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
 }
 
 func postUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	bodyBytes, err := io.ReadAll(r.Body)
 
 	if err != nil {
@@ -74,13 +76,14 @@ func postUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateUsers := u.userService.SaveUsers(users)
+	updateUsers := u.userService.SaveUsers(ctx, users)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updateUsers)
 }
 
 func putUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	bodyBytes, err := io.ReadAll(r.Body)
 
 	if err != nil {
@@ -98,7 +101,7 @@ func putUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateUser, err := u.userService.PutUser(&user)
+	updateUser, err := u.userService.PutUser(ctx, &user)
 	if err != nil {
 		handleError(err, w)
 
