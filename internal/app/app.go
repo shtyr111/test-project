@@ -4,12 +4,14 @@ import (
 	"test-project/internal/config/application"
 	"test-project/internal/config/logger"
 	"test-project/internal/config/postgres"
-	"test-project/internal/http_client"
+	"test-project/internal/http_client/user_client"
 	"test-project/internal/repository"
 	sendToOlbScheduler "test-project/internal/scheduler/send_to_olb"
-	"test-project/internal/service"
+	user2 "test-project/internal/service/user"
+	"test-project/internal/service/websocket"
 	"test-project/internal/transport/rest"
-	"test-project/internal/transport/rest/handlers"
+	"test-project/internal/transport/rest/handlers/user"
+	ws "test-project/internal/transport/rest/handlers/websocket"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -28,20 +30,23 @@ func Run() {
 	if err != nil {
 		return
 	}
-	pool, err1 := postgresConfig.InitPool()
-	if err1 != nil {
+	pool, err := postgresConfig.InitPool()
+	if err == nil {
 	}
+	defer postgresConfig.ClosePool()
 
-	client := http_client.New()
+	client := user_client.New()
 	repository := repository.New(pool)
-	service := service.New(repository, client)
-	handler := handlers.New(service)
-	server := rest.New(handler)
+	webSocketService := websocket.NewWebsocketService()
+	userService := user2.New(repository, client, webSocketService)
+	handler := user.New(userService)
+	wsHandler := ws.NewWebsocketHandler(webSocketService)
+
+	server := rest.New(handler, wsHandler)
 
 	sendToOlbScheduler := sendToOlbScheduler.New(config.Properties.SendUserToOlbSchedulerCron, config.Properties.SendUserToOlbSchedulerSectionAdvisoryCron,
-		config.Properties.SendUserToOlbSchedulerParallelCurrencySend, service)
+		config.Properties.SendUserToOlbSchedulerParallelCurrencySend, userService)
 	sendToOlbScheduler.Start()
 
 	server.RunHttpServer()
-	defer postgresConfig.ClosePool()
 }

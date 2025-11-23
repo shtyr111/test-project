@@ -7,18 +7,20 @@ import (
 	"os"
 	"strings"
 	"test-project/internal/config/application"
-	"test-project/internal/transport/rest/handlers"
+	"test-project/internal/transport/rest/handlers/user"
+	"test-project/internal/transport/rest/handlers/websocket"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type Server struct {
-	userHandler *handlers.UserHandler
+	userHandler *user.UserHandler
+	wsHandler   *websocket.WebsocketHandler
 }
 
-func New(userHandler *handlers.UserHandler) *Server {
-	return &Server{userHandler: userHandler}
+func New(userHandler *user.UserHandler, wsHandler *websocket.WebsocketHandler) *Server {
+	return &Server{userHandler: userHandler, wsHandler: wsHandler}
 }
 
 func (s Server) RunHttpServer() {
@@ -26,10 +28,11 @@ func (s Server) RunHttpServer() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/users", s.userHandler.UsersHandler)
+	mux.HandleFunc("/ws", s.wsHandler.WebSocketHandler)
 
-	loggerMux := loggingMiddleware(mux)
+	//loggerMux := loggingMiddleware(mux)
 
-	e := http.ListenAndServe(strings.Join([]string{":", application.SERVER_CONFIG.Port}, ""), loggerMux)
+	e := http.ListenAndServe(strings.Join([]string{":", application.SERVER_CONFIG.Port}, ""), mux)
 
 	if e != nil {
 		log.Fatal("Произошла ошибка при старте сервера", e)

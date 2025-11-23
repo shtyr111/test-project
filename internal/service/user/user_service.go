@@ -1,12 +1,14 @@
-package service
+package user
 
 import (
 	"context"
 	"errors"
 	"sync"
-	"test-project/internal/http_client"
+	"test-project/internal/http_client/user_client"
 	"test-project/internal/models"
 	"test-project/internal/repository"
+	"test-project/internal/service/websocket"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -14,14 +16,15 @@ import (
 )
 
 type UserService struct {
-	userRepository *repository.UserRepository
-	internalClient *http_client.InternalClient
+	userRepository   *repository.UserRepository
+	internalClient   *user_client.InternalClient
+	webSocketService *websocket.WebsocketService
 }
 
 var countSendUserWithStatusNewToInternalSystemAndSave int
 
-func New(userRepository *repository.UserRepository, internalClient *http_client.InternalClient) *UserService {
-	return &UserService{userRepository: userRepository, internalClient: internalClient}
+func New(userRepository *repository.UserRepository, internalClient *user_client.InternalClient, webSocketService *websocket.WebsocketService) *UserService {
+	return &UserService{userRepository: userRepository, internalClient: internalClient, webSocketService: webSocketService}
 }
 
 func (u UserService) FindById(id uuid.UUID) (*models.User, error) {
@@ -40,6 +43,21 @@ func (u UserService) SaveUsers(users []models.User) []models.User {
 	}
 
 	return newUsers
+}
+
+func (u UserService) PutUser(user *models.User) (*models.User, error) {
+	oldUser, err := u.userRepository.FindById(user.Id)
+	if err != nil {
+		notification := models.Notification{Id: user.Id, Time: time.Now(), NewStatus: user.Status}
+		u.webSocketService.SendToClient(&notification)
+
+		return u.userRepository.Upsert(user)
+	}
+
+	notification := models.Notification{Id: user.Id, Time: time.Now(), NewStatus: user.Status, OldStatus: oldUser.Status}
+	u.webSocketService.SendToClient(&notification)
+
+	return u.userRepository.Upsert(user)
 }
 
 func (u UserService) FindAndSendUsersWithStatusNewToInternalSystem(sectionNumber int, parallelCurrencySend int) {
@@ -85,15 +103,16 @@ func (u UserService) parallelSendUsersWithStatusNewToInternalSystemAndSave(users
 
 	for _, user := range users {
 		wg.Add(1)
-		go u.sendUserWithStatusNewToInternalSystemAndSave(user, semaphore, &wg, &mutex)
+		go func() {
+			defer wg.Done()
+			u.sendUserWithStatusNewToInternalSystemAndSave(user, semaphore, &mutex)
+		}()
 	}
 
 	wg.Wait()
 }
 
-func (u UserService) sendUserWithStatusNewToInternalSystemAndSave(user models.User, semaphore chan struct{}, wg *sync.WaitGroup, mutex *sync.Mutex) {
-	defer wg.Done()
-
+func (u UserService) sendUserWithStatusNewToInternalSystemAndSave(user models.User, semaphore chan struct{}, mutex *sync.Mutex) {
 	semaphore <- struct{}{}
 	defer func() { <-semaphore }()
 

@@ -1,4 +1,4 @@
-package handlers
+package user
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 	"test-project/internal/models"
-	"test-project/internal/service"
+	"test-project/internal/service/user"
 
 	"github.com/google/uuid"
 
@@ -14,10 +14,10 @@ import (
 )
 
 type UserHandler struct {
-	userService *service.UserService
+	userService *user.UserService
 }
 
-func New(userService *service.UserService) *UserHandler {
+func New(userService *user.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
 
@@ -27,6 +27,8 @@ func (u UserHandler) UsersHandler(w http.ResponseWriter, r *http.Request) {
 		getUsersHandler(u, w, r)
 	case http.MethodPost:
 		postUsersHandler(u, w, r)
+	case http.MethodPut:
+		putUsersHandler(u, w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -76,6 +78,35 @@ func postUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updateUsers)
+}
+
+func putUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
+	bodyBytes, err := io.ReadAll(r.Body)
+
+	if err != nil {
+		wrapErr := fmt.Errorf("Произошла ошибка при десериализации тела запроса: %w", err)
+		handleError(wrapErr, w)
+
+		return
+	}
+
+	var user models.User
+	err = json.Unmarshal(bodyBytes, &user)
+	if err != nil {
+		handleError(err, w)
+
+		return
+	}
+
+	updateUser, err := u.userService.PutUser(&user)
+	if err != nil {
+		handleError(err, w)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updateUser)
 }
 
 func handleError(err error, w http.ResponseWriter) {
