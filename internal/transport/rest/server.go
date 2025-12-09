@@ -2,11 +2,13 @@ package rest
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 	"test-project/internal/config/application"
+	"test-project/internal/service/metrics"
 	"test-project/internal/transport/rest/handlers/user"
 	"test-project/internal/transport/rest/handlers/websocket"
 	"time"
@@ -15,12 +17,14 @@ import (
 )
 
 type Server struct {
-	userHandler *user.UserHandler
-	wsHandler   *websocket.WebsocketHandler
+	userHandler    *user.UserHandler
+	wsHandler      *websocket.WebsocketHandler
+	metricsService *metrics.MetricsService
+	metricHandler  *http.Handler
 }
 
-func New(userHandler *user.UserHandler, wsHandler *websocket.WebsocketHandler) *Server {
-	return &Server{userHandler: userHandler, wsHandler: wsHandler}
+func New(userHandler *user.UserHandler, wsHandler *websocket.WebsocketHandler, metricsService *metrics.MetricsService, metricHandler *http.Handler) *Server {
+	return &Server{userHandler: userHandler, wsHandler: wsHandler, metricsService: metricsService, metricHandler: metricHandler}
 }
 
 func (s Server) RunHttpServer() {
@@ -28,9 +32,10 @@ func (s Server) RunHttpServer() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/users", s.userHandler.UsersHandler)
+	mux.Handle("/metrics", *s.metricHandler)
 	mux.HandleFunc("/ws", s.wsHandler.WebSocketHandler)
 
-	loggerMux := loggingMiddleware(mux)
+	loggerMux := loggingMiddleware(mux, s.metricsService)
 
 	e := http.ListenAndServe(strings.Join([]string{":", application.SERVER_CONFIG.Port}, ""), loggerMux)
 
@@ -40,7 +45,7 @@ func (s Server) RunHttpServer() {
 	}
 }
 
-func loggingMiddleware(next http.Handler) http.Handler {
+func loggingMiddleware(next http.Handler, metricsService *metrics.MetricsService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/ws" {
 			next.ServeHTTP(w, r)
@@ -75,8 +80,10 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		// Логируем статус код и тело ответа
 		log.Printf("Response status: %d", rw.statusCode)
 		log.Printf("Response body: %s", rw.body.String())
-
 		log.Printf("Request processed in %s", time.Since(start))
+
+		metricsService.IncrementCountHttpRequests(r.Method, r.URL.Path, fmt.Sprintf("%d", rw.statusCode))
+		metricsService.IncrementDurationHttpRequests(r.Method, r.URL.Path, fmt.Sprintf("%d", rw.statusCode), time.Since(start).Seconds())
 	})
 }
 

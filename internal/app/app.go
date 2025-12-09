@@ -9,12 +9,14 @@ import (
 	postgres2 "test-project/internal/repository/postgres"
 	redis2 "test-project/internal/repository/redis"
 	sendToOlbScheduler "test-project/internal/scheduler/send_to_olb"
+	"test-project/internal/service/metrics"
 	user2 "test-project/internal/service/user"
 	"test-project/internal/service/websocket"
 	"test-project/internal/transport/rest"
 	"test-project/internal/transport/rest/handlers/user"
 	ws "test-project/internal/transport/rest/handlers/websocket"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -41,6 +43,7 @@ func Run() {
 
 	log.Info("Redis config: ", redisConn)
 
+	metricsService := metrics.NewMetricsService()
 	client := user_client.New()
 	repository := postgres2.New(pool)
 	redisUserRepository := redis2.NewRedisUserRepository(redisConn)
@@ -48,8 +51,9 @@ func Run() {
 	userService := user2.New(repository, client, webSocketService, redisUserRepository)
 	handler := user.New(userService)
 	wsHandler := ws.NewWebsocketHandler(webSocketService)
+	metricHandler := promhttp.Handler()
 
-	server := rest.New(handler, wsHandler)
+	server := rest.New(handler, wsHandler, metricsService, &metricHandler)
 
 	sendToOlbScheduler := sendToOlbScheduler.New(config.Properties.SendUserToOlbSchedulerCron, config.Properties.SendUserToOlbSchedulerSectionAdvisoryCron,
 		config.Properties.SendUserToOlbSchedulerParallelCurrencySend, userService)
