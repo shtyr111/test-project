@@ -30,6 +30,17 @@ type Config struct {
 		SendUserToOlbSchedulerSectionAdvisoryCron  int    `yaml:"send-user-to-olb-scheduler-section-advisory-lock"`
 		SendUserToOlbSchedulerParallelCurrencySend int    `yaml:"send-user-to-olb-scheduler-parallel-currency-send"`
 	} `yaml:"configuration-properties"`
+
+	Redis struct {
+		Address  string `yaml:"address"`
+		Username string `yaml:"username"`
+		Password string `yaml:"password"`
+		DB       int    `yaml:"db"`
+		Pool     struct {
+			MinSize int `yaml:"min-size"`
+			MaxSize int `yaml:"max-size"`
+		} `yaml:"pool"`
+	} `yaml:"redis"`
 }
 
 var fullConfig Config

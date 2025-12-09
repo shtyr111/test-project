@@ -76,7 +76,12 @@ func postUsersHandler(u UserHandler, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateUsers := u.userService.SaveUsers(ctx, users)
+	updateUsers, err := u.userService.SaveUsers(ctx, users)
+	if err != nil {
+		handleError(err, w)
+
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updateUsers)

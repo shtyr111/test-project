@@ -11,6 +11,15 @@ database:
     min-size: 8
     max-size: 16
 
+redis:
+  address: "localhost:6379"
+  username: default
+  password: my-password
+  db: 0
+  pool:
+    min-size: 8
+    max-size: 16
+
 configuration-properties:
   send-user-to-olb-scheduler-cron: "* * * * *"
   send-user-to-olb-scheduler-section-advisory-lock: 1

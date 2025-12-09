@@ -4,8 +4,10 @@ import (
 	"test-project/internal/config/application"
 	"test-project/internal/config/logger"
 	"test-project/internal/config/postgres"
+	"test-project/internal/config/redis"
 	"test-project/internal/http_client/user_client"
-	"test-project/internal/repository"
+	postgres2 "test-project/internal/repository/postgres"
+	redis2 "test-project/internal/repository/redis"
 	sendToOlbScheduler "test-project/internal/scheduler/send_to_olb"
 	user2 "test-project/internal/service/user"
 	"test-project/internal/service/websocket"
@@ -35,10 +37,15 @@ func Run() {
 	}
 	defer postgresConfig.ClosePool()
 
+	redisConn := redis.CreateNewConnection(&config)
+
+	log.Info("Redis config: ", redisConn)
+
 	client := user_client.New()
-	repository := repository.New(pool)
+	repository := postgres2.New(pool)
+	redisUserRepository := redis2.NewRedisUserRepository(redisConn)
 	webSocketService := websocket.NewWebsocketService()
-	userService := user2.New(repository, client, webSocketService)
+	userService := user2.New(repository, client, webSocketService, redisUserRepository)
 	handler := user.New(userService)
 	wsHandler := ws.NewWebsocketHandler(webSocketService)
 

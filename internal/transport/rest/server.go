@@ -30,9 +30,9 @@ func (s Server) RunHttpServer() {
 	mux.HandleFunc("/users", s.userHandler.UsersHandler)
 	mux.HandleFunc("/ws", s.wsHandler.WebSocketHandler)
 
-	//loggerMux := loggingMiddleware(mux)
+	loggerMux := loggingMiddleware(mux)
 
-	e := http.ListenAndServe(strings.Join([]string{":", application.SERVER_CONFIG.Port}, ""), mux)
+	e := http.ListenAndServe(strings.Join([]string{":", application.SERVER_CONFIG.Port}, ""), loggerMux)
 
 	if e != nil {
 		log.Fatal("Произошла ошибка при старте сервера", e)
@@ -42,6 +42,11 @@ func (s Server) RunHttpServer() {
 
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/ws" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		start := time.Now()
 
 		// Логируем URL, метод и параметры запроса

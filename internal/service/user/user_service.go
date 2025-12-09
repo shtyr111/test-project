@@ -6,7 +6,8 @@ import (
 	"sync"
 	"test-project/internal/http_client/user_client"
 	"test-project/internal/models"
-	"test-project/internal/repository"
+	"test-project/internal/repository/postgres"
+	redis2 "test-project/internal/repository/redis"
 	"test-project/internal/service/websocket"
 	"time"
 
@@ -16,33 +17,52 @@ import (
 )
 
 type UserService struct {
-	userRepository   *repository.UserRepository
-	internalClient   *user_client.InternalClient
-	webSocketService *websocket.WebsocketService
+	userRepository      *postgres.UserRepository
+	internalClient      *user_client.InternalClient
+	webSocketService    *websocket.WebsocketService
+	redisUserRepository *redis2.RedisUserRepository
+}
+
+type UserRepositoryInterface interface {
+	Insert(ctx context.Context, user models.User) (*models.User, error)
+	FindById(ctx context.Context, id uuid.UUID) (*models.User, error)
+	Upsert(ctx context.Context, user *models.User) (*models.User, error)
 }
 
 var countSendUserWithStatusNewToInternalSystemAndSave int
 
-func New(userRepository *repository.UserRepository, internalClient *user_client.InternalClient, webSocketService *websocket.WebsocketService) *UserService {
-	return &UserService{userRepository: userRepository, internalClient: internalClient, webSocketService: webSocketService}
+func New(userRepository *postgres.UserRepository, internalClient *user_client.InternalClient, webSocketService *websocket.WebsocketService, redisUserRepository *redis2.RedisUserRepository) *UserService {
+	return &UserService{userRepository: userRepository, internalClient: internalClient, webSocketService: webSocketService, redisUserRepository: redisUserRepository}
 }
 
 func (u UserService) FindById(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	return u.userRepository.FindById(ctx, id)
+	user, err := u.redisUserRepository.FindById(ctx, id)
+	if err != nil {
+		log.Warn("Ошибка получения юзера из редиса", err)
+		return u.userRepository.FindById(ctx, id)
+	}
+
+	return user, nil
 }
 
-func (u UserService) SaveUsers(ctx context.Context, users []models.User) []models.User {
+func (u UserService) SaveUsers(ctx context.Context, users []models.User) ([]models.User, error) {
 	var newUsers []models.User
 	for i := range users {
 		users[i].SetStatus("NEW")
 		user, err := u.userRepository.Insert(ctx, users[i])
 		if err != nil {
+			return nil, err
 		}
 
-		newUsers = append(newUsers, *user)
+		userSavedToRedis, err := u.redisUserRepository.Insert(ctx, *user)
+		if err != nil {
+			return nil, err
+		}
+
+		newUsers = append(newUsers, *userSavedToRedis)
 	}
 
-	return newUsers
+	return newUsers, nil
 }
 
 func (u UserService) PutUser(ctx context.Context, user *models.User) (*models.User, error) {
