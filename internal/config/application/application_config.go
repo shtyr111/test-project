@@ -29,6 +29,7 @@ type Config struct {
 		SendUserToOlbSchedulerCron                 string `yaml:"send-user-to-olb-scheduler-cron"`
 		SendUserToOlbSchedulerSectionAdvisoryCron  int    `yaml:"send-user-to-olb-scheduler-section-advisory-lock"`
 		SendUserToOlbSchedulerParallelCurrencySend int    `yaml:"send-user-to-olb-scheduler-parallel-currency-send"`
+		InternalServerGrpcAddress                  string `yaml:"internal-server-grpc-address"`
 	} `yaml:"configuration-properties"`
 
 	Redis struct {

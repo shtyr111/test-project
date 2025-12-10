@@ -5,6 +5,7 @@ import (
 	"test-project/internal/config/logger"
 	"test-project/internal/config/postgres"
 	"test-project/internal/config/redis"
+	user_client2 "test-project/internal/grpc_client/user_client"
 	"test-project/internal/http_client/user_client"
 	postgres2 "test-project/internal/repository/postgres"
 	redis2 "test-project/internal/repository/redis"
@@ -12,6 +13,8 @@ import (
 	"test-project/internal/service/metrics"
 	user2 "test-project/internal/service/user"
 	"test-project/internal/service/websocket"
+	"test-project/internal/transport/grpc"
+	user3 "test-project/internal/transport/grpc/handlers/user"
 	"test-project/internal/transport/rest"
 	"test-project/internal/transport/rest/handlers/user"
 	ws "test-project/internal/transport/rest/handlers/websocket"
@@ -55,9 +58,14 @@ func Run() {
 
 	server := rest.New(handler, wsHandler, metricsService, &metricHandler)
 
+	grpcUserClient := user_client2.NewGrpcUserClient(config.Properties.InternalServerGrpcAddress)
+	grpcUserHandler := user3.NewGrpcUserHandler(userService, grpcUserClient)
+	grpcUserServer := grpc.NewGrpcServer(grpcUserHandler)
+
 	sendToOlbScheduler := sendToOlbScheduler.New(config.Properties.SendUserToOlbSchedulerCron, config.Properties.SendUserToOlbSchedulerSectionAdvisoryCron,
 		config.Properties.SendUserToOlbSchedulerParallelCurrencySend, userService)
 	sendToOlbScheduler.Start()
 
+	go grpcUserServer.RunGrpcServer()
 	server.RunHttpServer()
 }

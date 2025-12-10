@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/UserService/getUser"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "id": "1",
+      "name": "alex",
+      "age": 2,
+      "number": 4,
+      "status": "ss11"
+    },
+    "headers": {
+      "grpc-status": "0",
+      "grpc-message": "OK"
+    }
+  }
+}

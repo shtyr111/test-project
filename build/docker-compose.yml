@@ -17,6 +17,14 @@ services:
     ports:
       - "8081:8080"
     entrypoint: ["/docker-entrypoint.sh", "--global-response-templating", "--disable-gzip", "--verbose"]
+  grpc-mock:
+    image: javiyt/grpc-wiremock:latest
+    ports:
+      - "50051:50000" # grpc port
+      - "8088:8888" # http serve port
+    volumes:
+      - ./grpc_mocks:/wiremock/mappings # моки
+      - ./proto:/proto          # .proto файлы
   redis:
     image: redis:latest
     restart: always
